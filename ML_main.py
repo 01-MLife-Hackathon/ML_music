@@ -1,23 +1,47 @@
-import asyncio, discord, youtube_dl
+import asyncio, discord, threading
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
 from youtube_dl import YoutubeDL
 
 app = commands.Bot(command_prefix='ML ')
-token = "Token Here"
+token = "Nzk3MTI2NzQ2NzYyOTAzNjAy.X_h8Ig.py0NpcJgJnFKsC64n_7xtSok5W0"
 
-playerlist = []
+YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
+FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+
 playlist = []
-que = {}
+PLAYING = 0
 
 
-def queue(id):  # 음악 재생용 큐
-    if que[id] != []:
-        player = que[id].pop(0)
-        playerlist[id] = player
-        del playlist[0]
-        player.start()
+def play():
+    while True:
+        if len(playlist) == 0:
+            return
+        if not playlist[0][0].is_playing():  # 만약 플레이중이 아니면
+            player = playlist.pop(0)
+            print("player :", player, '\n', len(playlist))
+            player[0].play(FFmpegPCMAudio(player[1], **FFMPEG_OPTIONS))
+        else:
+            pass
+
+
+def add(player, URL):  # 플레이할 곡 정보를 리스트에 저장
+    with YoutubeDL(YDL_OPTIONS) as ydl:
+        info = ydl.extract_info(URL, download=False)
+    URL = info['formats'][0]['url']
+    playlist.append((player, URL))
+    for things in playlist:
+        print("list :", things)
+
+    if PLAYING == 0:  # 첫 한번 플레이중이 아니면 플레이 멀티스레딩 걸어놈
+        thread = threading.Thread(target=play)
+        thread.start()
+        return 0
+    if not playlist[0][0].is_playing():
+        return 0
+
+    return 1
 
 
 @app.event
@@ -64,19 +88,9 @@ async def _leave(ctx):
 
 @app.command(name="노래해", pass_context=True)
 async def _sing(ctx, url):
-    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
-    FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
     voice = get(app.voice_clients, guild=ctx.guild)
-
-    if not voice.is_playing():
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-        URL = info['formats'][0]['url']
-        voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-        voice.is_playing()
-    else:
-        await ctx.send("리스트에 추가되었습니다.")
-        return
+    if add(voice, url):
+        await ctx.send("리스트에 노래를 추가하였습니다.")
 
 
 app.run(token)
