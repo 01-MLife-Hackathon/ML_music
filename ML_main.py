@@ -1,10 +1,23 @@
 import asyncio, discord, youtube_dl
 from discord.ext import commands
+from discord.utils import get
+from discord import FFmpegPCMAudio
+from youtube_dl import YoutubeDL
 
 app = commands.Bot(command_prefix='ML ')
+token = "Token Here"
 
-token = "Nzk3MTI2NzQ2NzYyOTAzNjAy.X_h8Ig.xqikUJz5RBZNtCjL-_T8xr8-mGc"
-calcResult = 0
+playerlist = []
+playlist = []
+que = {}
+
+
+def queue(id):  # 음악 재생용 큐
+    if que[id] != []:
+        player = que[id].pop(0)
+        playerlist[id] = player
+        del playlist[0]
+        player.start()
 
 
 @app.event
@@ -23,11 +36,16 @@ async def on_message(message):
     await app.process_commands(message)
     if message.author.bot:
         return None
-    if message.content == "ML 안녕":
-        await message.channel.send("안녕 M-Life 친구들")
-    if "ML 따라하기" in message.content:
-        repeat = str(message.content).replace("ML 따라하기", "")
-        await message.channel.send(repeat)
+
+
+@app.command(name="안녕")
+async def hi(ctx):
+    await ctx.send("안녕 M-Life 친구들")
+
+
+@app.command(name="따라하기")
+async def repeat(ctx, *, txt):
+    await ctx.send(txt)
 
 
 @app.command(name="이리온", pass_context=True)
@@ -46,12 +64,19 @@ async def _leave(ctx):
 
 @app.command(name="노래해", pass_context=True)
 async def _sing(ctx, url):
-    # 오류 있음. 수정할 것.
-    try:
-        player = await app.voice_clients[0].create_ytdl_player(url)
-        player.start()
-    except Exception as Err:
-        await ctx.send("```오류 메세지 : " + str(Err) + "```")
+    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
+    FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+    voice = get(app.voice_clients, guild=ctx.guild)
+
+    if not voice.is_playing():
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
+        URL = info['formats'][0]['url']
+        voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
+        voice.is_playing()
+    else:
+        await ctx.send("리스트에 추가되었습니다.")
+        return
 
 
 app.run(token)
