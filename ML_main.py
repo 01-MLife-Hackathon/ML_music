@@ -1,44 +1,50 @@
-import asyncio, discord, threading
+import asyncio, discord, threading, time
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
 from youtube_dl import YoutubeDL
 
 app = commands.Bot(command_prefix='ML ')
-token = "Nzk3MTI2NzQ2NzYyOTAzNjAy.X_h8Ig.py0NpcJgJnFKsC64n_7xtSok5W0"
+token = "토토큰큰"
 
 YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 playlist = []
-PLAYING = 0
 
 
 def play():
+    player = playlist.pop(0)
+    print("player :", player, '\n', len(playlist))
+    player[0].play(FFmpegPCMAudio(player[1], **FFMPEG_OPTIONS))
+
+
+def _play():
     while True:
         if len(playlist) == 0:
+            print('threading off')
             return
         if not playlist[0][0].is_playing():  # 만약 플레이중이 아니면
-            player = playlist.pop(0)
-            print("player :", player, '\n', len(playlist))
-            player[0].play(FFmpegPCMAudio(player[1], **FFMPEG_OPTIONS))
+            play()
         else:
             pass
+        time.sleep(10)
 
 
 def add(player, URL):  # 플레이할 곡 정보를 리스트에 저장
+    thread = 0
+    if len(playlist) == 0:
+        thread = 1
+
     with YoutubeDL(YDL_OPTIONS) as ydl:
         info = ydl.extract_info(URL, download=False)
     URL = info['formats'][0]['url']
     playlist.append((player, URL))
-    for things in playlist:
-        print("list :", things)
 
-    if PLAYING == 0:  # 첫 한번 플레이중이 아니면 플레이 멀티스레딩 걸어놈
-        thread = threading.Thread(target=play)
+    if thread and not playlist[0][0].is_playing():  # 첫 한번 멀티쓰레딩
+        print("Therading on")
+        thread = threading.Thread(target=_play)
         thread.start()
-        return 0
-    if not playlist[0][0].is_playing():
         return 0
 
     return 1
@@ -83,6 +89,7 @@ async def _join(ctx):
 
 @app.command(name="저리가")
 async def _leave(ctx):
+    playlist.clear()
     await app.voice_clients[0].disconnect()  # 채널에서 나가기
 
 
@@ -91,6 +98,30 @@ async def _sing(ctx, url):
     voice = get(app.voice_clients, guild=ctx.guild)
     if add(voice, url):
         await ctx.send("리스트에 노래를 추가하였습니다.")
+
+
+@app.command(name="잠깐만")
+async def _pause(ctx):
+    if playlist[0][0].is_paused():
+        await ctx.send("이미 멈춰있네용")
+    else:
+        playlist[0][0].pause()
+        await ctx.send("잠깐만!")
+
+
+@app.command(name="다시")
+async def _resume(ctx):
+    if playlist[0][0].is_playing():
+        await ctx.send("이미 재생중인걸")
+    else:
+        playlist[0][0].resume()
+        await ctx.send("다시!")
+
+
+@app.command(name="목록")
+async def _list_song(ctx):
+    cnt = len(playlist)
+    await ctx.send(cnt)
 
 
 app.run(token)
