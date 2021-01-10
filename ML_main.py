@@ -5,7 +5,7 @@ from discord import FFmpegPCMAudio
 from youtube_dl import YoutubeDL
 
 app = commands.Bot(command_prefix='ML ')
-token = "토토큰큰"
+token = ""
 
 YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
@@ -57,7 +57,7 @@ async def on_ready():
     print(app.user.name)
     print(app.user.id)
     print("==========")
-    game = discord.Game("M-Life Music bot By H0N9D4N")
+    game = discord.Game("'ML 도와줘' 를 입력하세요. Made By H0N9_D4N")
     await app.change_presence(status=discord.Status.online, activity=game)  # 바뀜
 
 
@@ -66,7 +66,27 @@ async def on_message(message):
     await app.process_commands(message)
     if message.author.bot:
         return None
+    if message.content == "시발":
+        await message.channel.send("빠르고 꼬운 말")
 
+
+@app.command(name="도와줘")
+async def _help(ctx):
+    ret = "```\n" \
+          "M-Life Music bot By H0N9D4N\n" \
+          "USAGE :\n" \
+          "ML 안녕\n" \
+          "ML 따라하기 <str>\n" \
+          "ML 이리온\n" \
+          "ML 저리가\n" \
+          "ML 노래해 <링크>\n" \
+          "ML 잠깐만\n" \
+          "ML 다시\n" \
+          "ML 목록\n" \
+          "이스터에그 1추\n" \
+          "```"
+    await ctx.send(ret)
+    
 
 @app.command(name="안녕")
 async def hi(ctx):
@@ -102,25 +122,32 @@ async def _sing(ctx, url):
 
 @app.command(name="잠깐만")
 async def _pause(ctx):
-    if playlist[0][0].is_paused():
-        await ctx.send("이미 멈춰있네용")
-    else:
-        playlist[0][0].pause()
-        await ctx.send("잠깐만!")
+    try:
+        if playlist[0][0].is_paused():
+            await ctx.send("이미 멈춰있네용")
+        else:
+            playlist[0][0].pause()
+            await ctx.send("잠깐만!")
+    except:
+        await ctx.send("뭐야 아무것도 없잖아")
 
 
 @app.command(name="다시")
 async def _resume(ctx):
-    if playlist[0][0].is_playing():
-        await ctx.send("이미 재생중인걸")
-    else:
-        playlist[0][0].resume()
-        await ctx.send("다시!")
+    try:
+        if playlist[0][0].is_playing():
+            await ctx.send("이미 재생중인걸")
+        else:
+            playlist[0][0].resume()
+            await ctx.send("다시!")
+
+    except:
+        await ctx.send("뭐야 아무것도 없잖아")
 
 
 @app.command(name="목록")
 async def _list_song(ctx):
-    cnt = len(playlist)
+    cnt = str(len(playlist)) + " 개의 음악이 남았습니다."
     await ctx.send(cnt)
 
 
